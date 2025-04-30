@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUMBERLololo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            background-color: #121213;
+            margin: 0;
+            padding: 20px;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        h1 {
+            font-weight: 600;
+            font-size: 2.5rem;
+            margin: 0 0 1.5rem 0;
+            letter-spacing: 0.1em;
+        }
+        
+        .game-container {
+            max-width: 350px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .input-container {
+            margin-bottom: 1.5rem;
+        }
+        
+        input {
+            width: 62px;
+            height: 62px;
+            font-size: 2rem;
+            text-align: center;
+            margin: 0 5px;
+            border: 2px solid #3a3a3c;
+            border-radius: 4px;
+            background-color: transparent;
+            color: white;
+            font-weight: 600;
+            caret-color: transparent;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #565758;
+        }
+        
+        .board {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 2rem 0;
+        }
+        
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .cell {
+            width: 62px;
+            height: 62px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: 600;
+            border: 2px solid #3a3a3c;
+            border-radius: 4px;
+        }
+        
+        .correct {
+            background-color: #538d4e;
+            border-color: #538d4e;
+        }
+        
+        .present {
+            background-color: #b59f3b;
+            border-color: #b59f3b;
+        }
+        
+        .absent {
+            background-color: #ee1111;
+            border-color: #3a3a3c;
+        }
+        
+        .message {
+            margin: 1rem 0;
+            font-size: 1rem;
+            min-height: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .success {
+            color: #538d4e;
+        }
+        
+        .error {
+            color: #ff5252;
+        }
+        
+        .attempts {
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #d7dadc;
+            letter-spacing: 0.05em;
+        }
+        
+        #new-game {
+            background-color: #565758;
+            color: white;
+            border: none;
+            padding: 12px 0;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: background-color 0.2s;
+            display: none;
+        }
+        
+        #new-game:hover {
+            background-color: #4a4b4c;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>NUMBERLE</h1>
+        <div class="attempts"> TENTATIVAS: <span id="attempts">6</span></div>
+        
+        <div class="input-container">
+            <input type="text" maxlength="1" id="digit1" pattern="[0-9]">
+            <input type="text" maxlength="1" id="digit2" pattern="[0-9]">
+            <input type="text" maxlength="1" id="digit3" pattern="[0-9]">
+            <input type="text" maxlength="1" id="digit4" pattern="[0-9]">
+        </div>
+        
+        <button id="new-game">NEW GAME</button>
+        
+        <div class="message" id="message"></div>
+        
+        <div class="board" id="board"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game state
+            let targetNumber = generateRandomNumber();
+            let attemptsLeft = 6;
+            let gameOver = false;
+            
+            // DOM elements
+            const digitInputs = [
+                document.getElementById('digit1'),
+                document.getElementById('digit2'),
+                document.getElementById('digit3'),
+                document.getElementById('digit4')
+            ];
+            const newGameButton = document.getElementById('new-game');
+            const messageElement = document.getElementById('message');
+            const attemptsElement = document.getElementById('attempts');
+            const boardElement = document.getElementById('board');
+            
+            // Initialize input behavior
+            setupInputs();
+            
+            // Event listeners
+            newGameButton.addEventListener('click', startNewGame);
+            
+            // Generate a random 4-digit number with no repeating digits
+            function generateRandomNumber() {
+                const digits = [];
+                while (digits.length < 4) {
+                    const digit = Math.floor(Math.random() * 10).toString();
+                    if (!digits.includes(digit)) {
+                        digits.push(digit);
+                    }
+                }
+                return digits.join('');
+            }
+            
+            // Set up input behavior
+            function setupInputs() {
+                digitInputs.forEach((input, index) => {
+                    // Auto-focus next input when a digit is entered
+                    input.addEventListener('input', function() {
+                        if (this.value.length === 1) {
+                            if (index < 3) {
+                                digitInputs[index + 1].focus();
+                            }
+                        }
+                    });
+                    
+                    // Handle backspace to move to previous input
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                            digitInputs[index - 1].focus();
+                        }
+                        
+                        // Submit on Enter when on last input
+                        if (e.key === 'Enter' && index === 3) {
+                            submitGuess();
+                        }
+                    });
+                });
+                
+                // Focus first input on page load
+                digitInputs[0].focus();
+            }
+            
+            // Submit the current guess
+            function submitGuess() {
+                if (gameOver) return;
+                
+                // Get the current guess
+                const guess = digitInputs.map(input => input.value).join('');
+                
+                // Validate the guess
+                if (guess.length !== 4 || !/^\d{4}$/.test(guess)) {
+                    showMessage('4 DIGITOS', 'error');
+                    return;
+                }
+                
+                // Check for duplicate digits
+                const uniqueDigits = new Set(guess.split(''));
+                if (uniqueDigits.size < 4) {
+                    showMessage('NÃO PODE REPETIR', 'error');
+                    return;
+                }
+                
+                // Process the guess
+                processGuess(guess);
+            }
+            
+            // Process a valid guess
+            function processGuess(guess) {
+                // Decrement attempts
+                attemptsLeft--;
+                attemptsElement.textContent = attemptsLeft;
+                
+                // Create a new row for the guess
+                const row = document.createElement('div');
+                row.className = 'row';
+                
+                // Create cells for each digit
+                const guessDigits = guess.split('');
+                const targetDigits = targetNumber.split('');
+                const result = checkGuess(guess, targetNumber);
+                
+                guessDigits.forEach((digit, index) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = digit;
+                    
+                    // Apply appropriate class based on result
+                    if (result.correctPositions.includes(index)) {
+                        cell.classList.add('correct');
+                    } else if (result.correctDigits.includes(digit)) {
+                        cell.classList.add('present');
+                    } else {
+                        cell.classList.add('absent');
+                    }
+                    
+                    row.appendChild(cell);
+                });
+                
+                // Add the row to the board
+                boardElement.prepend(row);
+                
+                // Clear inputs
+                digitInputs.forEach(input => {
+                    input.value = '';
+                });
+                digitInputs[0].focus();
+                
+                // Check for win or loss
+                if (guess === targetNumber) {
+                    gameOver = true;
+                    showMessage('Correct!', 'success');
+                    newGameButton.style.display = 'block';
+                } else if (attemptsLeft === 0) {
+                    gameOver = true;
+                    showMessage(targetNumber, 'error');
+                    newGameButton.style.display = 'block';
+                }
+            }
+            
+            // Check the guess against the target number
+            function checkGuess(guess, target) {
+                const guessDigits = guess.split('');
+                const targetDigits = target.split('');
+                const result = {
+                    correctPositions: [],
+                    correctDigits: []
+                };
+                
+                // Check for correct positions
+                guessDigits.forEach((digit, index) => {
+                    if (digit === targetDigits[index]) {
+                        result.correctPositions.push(index);
+                    }
+                });
+                
+                // Check for correct digits in wrong positions
+                guessDigits.forEach((digit, index) => {
+                    if (!result.correctPositions.includes(index) && targetDigits.includes(digit)) {
+                        result.correctDigits.push(digit);
+                    }
+                });
+                
+                return result;
+            }
+            
+            // Show a message to the player
+            function showMessage(text, type) {
+                messageElement.textContent = text;
+                messageElement.className = 'message';
+                if (type) {
+                    messageElement.classList.add(type);
+                }
+            }
+            
+            // Start a new game
+            function startNewGame() {
+                targetNumber = generateRandomNumber();
+                attemptsLeft = 6;
+                gameOver = false;
+                
+                // Reset UI
+                digitInputs.forEach(input => {
+                    input.value = '';
+                });
+                digitInputs[0].focus();
+                boardElement.innerHTML = '';
+                messageElement.textContent = '';
+                messageElement.className = 'message';
+                attemptsElement.textContent = '6';
+                newGameButton.style.display = 'none';
+            }
+            
+            // Debug: log the target number (remove in production)
+            console.log("Target number:", targetNumber);
+        });
+    </script>
+</body>
+</html>
